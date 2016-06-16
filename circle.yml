@@ -1,0 +1,46 @@
+## Customize the test machine
+machine:
+  services:
+    - docker
+
+  # Add some environment variables
+  environment:
+    DOCKER_REGISTRY: steventaylor.me:5000
+    CONTAINER1: ${CIRCLE_PROJECT_REPONAME}
+    DOCKER_EMAIL: steven.taylor@me.com
+    BUILD: ${CIRCLE_BUILD_NUM}
+
+## Customize checkout
+checkout:
+  post:
+    - git submodule sync
+    - git submodule update --init # use submodules
+
+## Customize dependencies
+dependencies:
+  pre:
+  override:
+    - docker login -u ${dockeruser} -p ${dockerpass} -e ${DOCKER_EMAIL} ${DOCKER_REGISTRY}
+    - docker build -t ${DOCKER_REGISTRY}/${CONTAINER1} .
+    - docker tag -f ${DOCKER_REGISTRY}/${CONTAINER1}:latest ${DOCKER_REGISTRY}/${CONTAINER1}:build${BUILD}
+
+  # we automatically cache and restore many dependencies between
+  # builds. If you need to, you can add custom paths to cache:
+  cache_directories:
+
+## Customize test commands
+test:
+  override:
+  post:
+
+## Customize deployment commands
+deployment:
+  staging:
+    branch: master
+    commands:
+       - docker push ${DOCKER_REGISTRY}/${CONTAINER1}:build${BUILD}
+       - docker push ${DOCKER_REGISTRY}/${CONTAINER1}:latest
+
+## Custom notifications
+notify:
+  webhooks:
