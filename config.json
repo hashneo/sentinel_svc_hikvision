@@ -1,0 +1,39 @@
+{
+  "cameras": [
+    {
+      "address": "10.0.1.30",
+      "user": "sentinel",
+      "password": "gxupQR2e9iwLie"
+    },
+    {
+      "address": "10.0.1.31",
+      "user": "sentinel",
+      "password": "gxupQR2e9iwLie"
+    },
+    {
+      "address": "10.0.1.32",
+      "user": "sentinel",
+      "password": "gxupQR2e9iwLie"
+    },
+    {
+      "address": "10.0.1.33",
+      "user": "sentinel",
+      "password": "gxupQR2e9iwLie"
+    },
+    {
+      "address": "10.0.1.34",
+      "user": "sentinel",
+      "password": "gxupQR2e9iwLie"
+    },
+    {
+      "address": "10.0.1.35",
+      "user": "sentinel",
+      "password": "gxupQR2e9iwLie"
+    },
+    {
+      "address": "10.0.1.36",
+      "user": "sentinel",
+      "password": "gxupQR2e9iwLie"
+    }
+  ]
+}

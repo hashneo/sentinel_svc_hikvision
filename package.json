@@ -1,0 +1,29 @@
+{
+  "name": "hikvision",
+  "version": "1.0.0",
+  "description": "",
+  "main": "hikvision.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "node server.js"
+  },
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "array.prototype.find": "^1.0.0",
+    "body-parser": "^1.14.2",
+    "deepmerge": "^0.2.10",
+    "express": "^4.13.3",
+    "express-ws": "^1.0.0-rc.2",
+    "forallasync": "^1.0.2",
+    "gm": "^1.22.0",
+    "node-cache": "^3.0.1",
+    "node-etcd": "^4.2.1",
+    "node-uuid": "^1.4.7",
+    "portfinder": "^1.0.3",
+    "q": "^1.4.1",
+    "request": "^2.67.0",
+    "socket.io": "^1.4.4",
+    "xml2js": "^0.4.16"
+  }
+}
