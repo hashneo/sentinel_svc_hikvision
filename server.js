@@ -27,7 +27,12 @@ function sendAll(value){
     }
 }
 
+var result = etcd.getSync('sentinel/config/' + moduleName + '/');
+
+var config = JSON.parse(result.body.node.value);
+
 var service = require('./' + moduleName)(
+    config,
     function(device){
         var value = {
             "message" : "new-device",
