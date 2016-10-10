@@ -13,8 +13,7 @@ node {
         checkout scm
 
         sh 'docker login -u ${dockeruser} -p ${dockerpass} -e user@domain.com ${DOCKER_REGISTRY}'
-        sh 'docker build -t ${DOCKER_REGISTRY}/${CONTAINER1}:${BUILD} -f Dockerfile.${ARCH} .'
-        sh 'docker tag ${DOCKER_REGISTRY}/${CONTAINER1}:${LATEST} ${DOCKER_REGISTRY}/${CONTAINER1}:${BUILD}'
+        sh 'docker build -t ${DOCKER_REGISTRY}/${CONTAINER1}:${LATEST} -t ${DOCKER_REGISTRY}/${CONTAINER1}:${BUILD} -f Dockerfile.${ARCH} .'
 
         stage 'push'
         sh 'docker push ${DOCKER_REGISTRY}/${CONTAINER1}:${BUILD}'
