@@ -51,7 +51,11 @@ var service = require('./' + moduleName)(
 );
 
 
-require('portfinder').getPort(function (err, port) {
+let portfinder = require('portfinder') ;
+
+portfinder.basePort = process.env.PORT || 8000;
+
+portfinder.getPort(function (err, port) {
 
     httpServer.listen(port, process.env.HOSTNAME || '127.0.0.1', function () {
 
