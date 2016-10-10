@@ -2,7 +2,8 @@ env.ARCH = 'armv7'
 env.BUILD = '0.1.' + env.BUILD_NUMBER + '.' + env.ARCH
 env.LATEST = 'LATEST' + '.' + env.ARCH
 env.DOCKER_REGISTRY = 'steventaylor.me:5000'
-env.CONTAINER1 = 'sentinel_svc_hikvision'
+env.SERVICE_NAME = 'sentinel_svc_hikvision'
+env.CONTAINER1 = env.SERVICE_NAME
 env.DOCKER_HOST = 'tcp://10.0.1.40:2375'
 
 node {
@@ -21,5 +22,8 @@ node {
 
         stage 'cleanup'
         sh 'docker rmi ${DOCKER_REGISTRY}/${CONTAINER1}:${BUILD}'
+
+        stage 'deploy'
+        sh 'docker service update --image  ${DOCKER_REGISTRY}/${CONTAINER1}:${BUILD} ${SERVICE_NAME}'
     }
 }
