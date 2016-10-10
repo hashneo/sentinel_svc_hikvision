@@ -14,7 +14,7 @@ node {
 
         sh 'docker login -u ${dockeruser} -p ${dockerpass} -e user@domain.com ${DOCKER_REGISTRY}'
         sh 'docker build -t ${DOCKER_REGISTRY}/${CONTAINER1}:${BUILD} -f Dockerfile.${ARCH} .'
-        sh 'docker tag -f ${DOCKER_REGISTRY}/${CONTAINER1}:${LATEST} ${DOCKER_REGISTRY}/${CONTAINER1}:${BUILD}'
+        sh 'docker tag ${DOCKER_REGISTRY}/${CONTAINER1}:${LATEST} ${DOCKER_REGISTRY}/${CONTAINER1}:${BUILD}'
 
         stage 'push'
         sh 'docker push ${DOCKER_REGISTRY}/${CONTAINER1}:${BUILD}'
