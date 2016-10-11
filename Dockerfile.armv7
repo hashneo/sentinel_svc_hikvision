@@ -4,9 +4,11 @@ COPY ./ /app
 
 WORKDIR /app
 
+RUN apt-get update && apt-get install /y iputils-ping net-tools
+
 RUN npm install
 
-EXPOSE 8080
+EXPOSE 8000
 
 ENTRYPOINT ["npm", "start"]
 
