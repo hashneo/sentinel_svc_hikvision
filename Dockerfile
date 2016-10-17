@@ -1,14 +1,12 @@
-FROM mhart/alpine-node:6.2.1
+FROM mhart/alpine-node:latest
 
-RUN apk update && apk add imagemagick
+#bash is used to run npm test inside the container
+RUN apk update && apk upgrade && apk --update add bash && rm -rf /var/cache/apk/*
 
-COPY ./ /app
-
-WORKDIR /app
+WORKDIR /src
+ADD . .
 
 RUN npm install
-RUN npm install forever -g
 
-EXPOSE 8000
-
-ENTRYPOINT ["forever", "server.js"]
+EXPOSE 5000
+CMD ["node", "app.js"]

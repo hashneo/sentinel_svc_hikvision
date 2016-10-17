@@ -1,147 +1,171 @@
+'use strict';
+
 require('array.prototype.find');
 
-module.exports = function (config, onDevice, onStatus) {
+function hikvision(config) {
 
-	var request = require('request');
-	//var config = require('./config.json');
+    if ( !(this instanceof hikvision) ){
+        return new hikvision(config);
+    }
 
-    var xml2js = require('xml2js');
+    const redis = require('redis');
 
-	var NodeCache = require( "node-cache" );
-	var deviceCache = new NodeCache();
-	var statusCache = new NodeCache();
+    const pub = redis.createClient({ host: '10.0.1.10' });
 
-    var forAllAsync = exports.forAllAsync || require('forallasync').forAllAsync;
+    const request = require('request');
 
-    var http = require('http');
-    var keepAliveAgent = new http.Agent({ keepAlive: true });
+    const xml2js = require('xml2js');
 
-    var gm = require('gm').subClass({imageMagick: true});
+    const NodeCache = require( 'node-cache' );
 
-	var that = this;
+    const deviceCache = new NodeCache();
+    const statusCache = new NodeCache();
 
-	deviceCache.on( "set", function( key, value ){
-		if ( onDevice !== undefined )
-			onDevice(value);
-	});
+    const forAllAsync = exports.forAllAsync || require('forallasync').forAllAsync;
 
-	statusCache.on( "set", function( key, value ){
-		if ( onStatus !== undefined )
-			onStatus(key, value);
-	});
+    const http = require('http');
+    const keepAliveAgent = new http.Agent({ keepAlive: true });
 
-    function loadSmartSetting(camera, setting, complete){
-        var url = setting;
-        switch (setting){
-            case 'ROI':
-            case 'AudioDetection':
-                url += '/channels';
-                break;
-        }
-        get(camera.baseUrl + '/Smart/' + url, function (settings, body) {
-            var data = {
-                'parsed': settings,
-                'xml': body
+    const gm = require('gm').subClass({imageMagick: true});
+
+
+    deviceCache.on( 'set', ( key, value ) => {
+        pub.publish('hikvision.device.insert',  JSON.stringify( { id : key, value : value } ) );
+    });
+
+    statusCache.on( 'set', ( key, value ) => {
+        pub.publish('hikvision.device.update',  JSON.stringify( { id : key, value : value } ) );
+    });
+
+    function call(method, body, url) {
+
+        return new Promise( (fulfill, reject) => {
+
+            var options = {
+                method: method,
+                url: url,
+                encoding: null,
+                timeout: 30000,
+                agent: keepAliveAgent
             };
-            complete(data);
-        }, function(error){
-            complete(null);
-        });
-    }
 
-    function updateSmartSetting(camera, feature, enabled, success, failed){
-        get(camera.baseUrl + '/Smart/' + feature, function (settings, body) {
-            settings[feature + 'List'][feature][0]['enabled'][0] = enabled ? 'true' : 'false';
-            post(camera.baseUrl + '/Smart/' + feature, settings, function (result, body) {
-                success();
-            }, function(error){
-                failed(error);
-            });
-        }, function(error){
-            failed(error);
-        });
-    }
-    function loadSmartCapabilities(camera, complete){
-        get(camera.baseUrl + '/Smart/capabilities', function (capabilities) {
-            camera['capabilities'] = {};
-            for( var cap in capabilities.SmartCap ){
-                var match;
-                if ((match = (/isSupport(\w+)/gi).exec(cap)) != null ){
-                    var feature = match[1];
-                    if ( capabilities.SmartCap[cap][0] === "true" ) {
-                        camera['capabilities'][feature] = {};
-                    }
-                }
+            if (body) {
+                options['body'] = body;
+                options['contentType'] = 'application/xml';
             }
-            complete();
-        }, function(error){
-            console.log( error );
-            complete();
+
+            try {
+                request(options, function (err, response, body) {
+                    if (!err && response.statusCode == 200) {
+
+                        if (response.headers['content-type'].toLowerCase().indexOf('image/') != -1) {
+                            fulfill({'type': response.headers['content-type'], 'image': body});
+                        } else {
+                            try {
+                                xml2js.parseString(body, (err, result) => {
+                                    fulfill(result, body);
+                                });
+                            }
+                            catch (e) {
+                                reject(e.message);
+                            }
+                        }
+                    } else {
+                        console.log('request failed => ' + err);
+                        reject(err || body.toString('utf8'));
+                    }
+                });
+            } catch (e) {
+                console.log('request error => ' + e);
+                reject(e);
+            }
         });
     }
 
-    function get(url, success, error) {
-        call( 'GET', null, url, success, error );
+    function get(url) {
+        return call( 'GET', null, url );
     }
 
-    function post(url, obj, success, error) {
+    function post(url, obj) {
 
         var builder = new xml2js.Builder();
         var xml = builder.buildObject(obj);
 
-        call( 'PUT', xml, url, success, error );
+        return call( 'PUT', xml, url );
     }
 
-	function call(method, body, url, success, error) {
 
-/*
-        http.request( { hostname:'localhost', port:80, path:'/', agent:pool});
-        request({url:"http://www.google.com", pool:pool });
-*/
-		var options = {
-            method: method,
-			url : url,
-            encoding: null,
-			timeout : 30000,
-            agent: keepAliveAgent
-		};
+    function loadSmartSetting(camera, setting){
 
-        if ( body ) {
-            options['body'] = body;
-            options['contentType'] = 'application/xml';
-        }
+        return new Promise( (fulfill, reject) => {
 
-        //console.log( 'calling url => ' + url );
+            var url = setting;
+            switch (setting) {
+                case 'ROI':
+                case 'AudioDetection':
+                    url += '/channels';
+                    break;
+            }
 
-        try {
-            request(options, function (err, response, body) {
-                if (!err && response.statusCode == 200) {
+            get(camera.baseUrl + '/Smart/' + url)
+                .then( (settings, body) => {
+                    var data = {
+                        'parsed': settings,
+                        'xml': body
+                    };
+                    fulfill(data);
+                })
+                .catch( (err) => {
+                    reject(err);
+                })
+        });
+    }
 
-                    if ( response.headers['content-type'].toLowerCase().indexOf('image/') != -1 ){
-                        success( { 'type' : response.headers['content-type'], 'image' : body } );
-                    } else {
-                        var v = null;
-                        try {
-                            xml2js.parseString(body, function (err, result) {
-                                success(result, body);
-                            });
-                        }
-                        catch(e) {
-                            error(e.message);
+    function updateSmartSetting(camera, feature, enabled) {
+
+        return new Promise( (fulfill, reject) => {
+
+            get(camera.baseUrl + '/Smart/' + feature)
+
+                .then ( (settings) => {
+                    settings[feature + 'List'][feature][0]['enabled'][0] = enabled ? 'true' : 'false';
+                    return post(camera.baseUrl + '/Smart/' + feature, settings);
+                })
+                .then( (result) => {
+                    fulfill(result);
+                })
+                .catch( (err) =>{
+                    reject(err);
+                });
+        });
+
+    };
+
+    function loadSmartCapabilities(camera){
+
+        return new Promise( (fulfill, reject) => {
+            get(camera.baseUrl + '/Smart/capabilities')
+
+                .then((capabilities) => {
+                    camera['capabilities'] = {};
+                    for (var cap in capabilities.SmartCap) {
+                        var match;
+                        if ((match = (/isSupport(\w+)/gi).exec(cap)) != null) {
+                            var feature = match[1];
+                            if (capabilities.SmartCap[cap][0] === 'true') {
+                                camera['capabilities'][feature] = {};
+                            }
                         }
                     }
-                } else {
-					console.log("request failed => " + err);
-                    error(err || body.toString('utf8')  );
-                }
-            });
-        }catch(e){
-            console.log("request error => " + e);
-            error(e);
-        }
-	}
+                    fulfill();
+                })
+                .catch( (err) => {
+                    reject(err);
+                });
+        });
+    }
 
-	function getCamera(id){
+    function getCamera(id){
         for(var i in config.cameras){
             var camera = config.cameras[i];
             if ( camera.data.id === id ){
@@ -151,151 +175,165 @@ module.exports = function (config, onDevice, onStatus) {
         throw 'invalid camera id => ' + id;
     }
 
-	this.device = new function () {
-		this.get = new function () {
-			this.status = function (params, success) {
-				var output = {};
-				output['Status'] = statusCache.get(params.id);
-				success(output);
-			};
-            this.image = function (params, success, failed) {
-                var camera = getCamera( params.id );
+    this.getDevices = () => {
 
-                get(camera.baseUrl + '/Streaming/channels/1/picture', function (data) {
+        return new Promise( (fulfill, reject) => {
+            deviceCache.keys( ( err, ids ) => {
+                if (err)
+                    return reject(err);
+
+                deviceCache.mget( ids, (err,values) =>{
+                    if (err)
+                        return reject(err);
+
+                    var data = [];
+
+                    for (var key in values) {
+                        data.push(values[key]);
+                    }
+
+                    fulfill(data);
+                });
+            });
+        });
+
+    };
+
+    this.getDeviceStatus = (id) => {
+
+        return new Promise( (fulfill, reject) => {
+            try {
+                statusCache.get(id, (err, value) => {
+                    if (err)
+                        return reject(err);
+
+                    fulfill(value);
+                }, true);
+            }catch(err){
+                reject(err);
+            }
+        });
+
+    };
+
+    this.setLineDetection = (id, enabled) => {
+        return updateSmartSetting( getCamera( id ), 'LineDetection', enabled);
+    };
+
+    this.setFieldDetection = (id, enabled) => {
+        return updateSmartSetting( getCamera( id ), 'FieldDetection', enabled);
+    };
+
+    this.getImage = (id, width, height) => {
+
+        return new Promise( (fulfill, reject) => {
+
+            var camera = getCamera(id);
+
+            get(camera.baseUrl + '/Streaming/channels/1/picture')
+                .then((data) => {
 
                     var contentType = data.type;
 
-                    if ( params.width !== undefined || params.height !== undefined ){
-                        var match = (/(\w+)\/(\w+)(?:;\s+charset)*/gi).exec(contentType);
-                        if (!match)
-                            return failed('unknown content type => ' + contentType);
+                    var match = (/(\w+)\/(\w+)(?:;\s+charset)*/gi).exec(contentType);
+                    if (!match)
+                        return reject('unknown content type => ' + contentType);
 
-                        var currentStatus = statusCache.get(params.id);
+                    var imageType = match[2];
 
-                        var imageType = match[2];
-                        var buffer = data.image;
-                        var newWidth = params.width;
-                        var newHeight = params.height;
+                    var buffer = data.image;
+                    var image = gm(buffer);
 
-                        var image = gm(buffer);
+                    function scaleImage(image, width, height) {
+                        return new Promise((fulfill, reject) => {
 
-                        image.size(function (err, size) {
+                            if (width !== undefined || height !== undefined) {
 
-                            if (err) return failed(err);
+                                var newWidth = width;
+                                var newHeight = height;
 
-                            if (newHeight === undefined)
-                                newHeight = ( size.height / size.width ) * newWidth;
-                            if ( newWidth === undefined )
-                                newWidth = ( size.width / size.height ) * newHeight;
+                                image.size((err, size) => {
 
-                            if ( currentStatus !== undefined && currentStatus.LineDetection !== undefined && currentStatus.LineDetection.enabled ) {
-                                for (var i in currentStatus.LineDetection.lines) {
-                                    var line = currentStatus.LineDetection.lines[i];
+                                    if (err)
+                                        return reject(err);
 
-                                    var s = {x: Math.round(line[0].x*size.width), y: Math.round(line[0].y*size.height)}; // Start
-                                    var e = {x: Math.round(line[1].x*size.width), y: Math.round(line[1].y*size.height)}; // End
+                                    if (newHeight === undefined)
+                                        newHeight = ( size.height / size.width ) * newWidth;
+                                    if (newWidth === undefined)
+                                        newWidth = ( size.width / size.height ) * newHeight;
 
-                                    image
-                                        .stroke('#FF000080', 20)
-                                        .drawLine(s.x, s.y, e.x, e.y);
-
-                                }
-                            }
-/*
-                            if ( currentStatus !== undefined && currentStatus.FieldDetection !== undefined && currentStatus.FieldDetection.enabled ) {
-                                for (var a in currentStatus.FieldDetection.regions) {
-                                    var region = currentStatus.FieldDetection.regions[i];
-
-                                    var points = [];
-
-                                    for (var b in region) {
-                                        var xy = region[b];
-
-                                        points.push({
-                                            'x': Math.round(xy.x * size.width),
-                                            'y': Math.round(xy.y * size.height)
-                                        });
-                                    }
-
-                                    image
-                                        .stroke('#FF000080', 20)
-                                        .drawPolyline(points);
-                                }
-                            }
- */
-                            image
-                                .resize(newWidth, newHeight)
-                                .toBuffer(imageType,function (err, buffer) {
-                                    if (err) return failed(err);
-                                    return success({ 'type' : 'image/' + imageType, 'image' : buffer });
+                                    image.resize(newWidth, newHeight)
+                                    fulfill(image);
                                 });
+                            }else {
+                                fulfill(image);
+                            }
+                        })
+                    };
 
-                        });
-/*
+                    scaleImage( image, width, height )
+                        .then( (image) => {
+                            return new Promise( (fulfill, reject) => {
+                                var currentStatus = statusCache.get(id);
 
-                        lwip.open(buffer, imageType, function(err, image){
-                            if ( err ) return failed(err.message);
-                            if (newHeight === undefined)
-                                newHeight = ( image.height() / image.width() ) * newWidth;
-                            if ( newWidth === undefined )
-                                newWidth = ( image.width() / image.height() ) * newHeight;
+                                if (currentStatus !== undefined ) {
 
-                            var batch = image.batch();
+                                    if (currentStatus.LineDetection !== undefined && currentStatus.LineDetection.enabled) {
+                                        for (var i in currentStatus.LineDetection.lines) {
+                                            var line = currentStatus.LineDetection.lines[i];
 
-                            batch.resize(parseInt(newWidth), parseInt(newHeight));
+                                            var s = {
+                                                x: Math.round(line[0].x * size.width),
+                                                y: Math.round(line[0].y * size.height)
+                                            }; // Start
+                                            var e = {
+                                                x: Math.round(line[1].x * size.width),
+                                                y: Math.round(line[1].y * size.height)
+                                            }; // End
 
-                            batch.exec(function(err, image){
-                                if ( err ) return failed(err.message);
-                                image.toBuffer(imageType, function(err, buffer){
-                                    if ( err ) return failed(err.message);
-                                    return success({ 'type' : 'image/' + imageType, 'image' : buffer });
-                                })
+                                            image
+                                                .stroke('#FF000080', 20)
+                                                .drawLine(s.x, s.y, e.x, e.y);
+                                        }
+                                    }
+                                }
+
+                                fulfill(image);
+                            })
+                        })
+                        .then( (image) => {
+                            image.toBuffer(imageType, (err, buffer) => {
+                                if (err)
+                                    return reject(err);
+
+                                return fulfill({'type': 'image/' + imageType, 'image': buffer});
                             });
-
+                        })
+                        .catch( (err) => {
+                            reject(err);
                         });
-*/
-                        //failed();
-                    }else{
-                        success(data);
-                    }
-
-                }, function(error){
-                    failed();
+                })
+                .catch( (err) => {
+                    reject(err);
                 });
-            };
-            this.stream = function (params, success, failed) {
+        });
+    };
 
-            };
-		};
+    function refreshCamerasStatus () {
 
-		this.set = new function () {
-            this.alarm = new function () {
-                this.enable = function (params, success, failed) {
-                    var camera = getCamera( params.id );
-                    updateSmartSetting(camera, params.type, true, success, failed);
-                };
-                this.disable = function (params, success, failed) {
-                    var camera = getCamera( params.id );
-                    updateSmartSetting(camera, params.type, false, success, failed);
-                };
-
-            };
-		};
-	};
-
-	this.status = function (params, success, error) {
-
-        function refreshCameraStatus( complete, camera ){
-            if ( Object.keys(camera['capabilities']).length > 0 ) {
+        function refreshCameraStatus(compvare, camera) {
+            if (Object.keys(camera['capabilities']).length > 0) {
                 var k = Object.keys(camera['capabilities']);
                 var results = {};
-                forAllAsync(k, function (complete, setting) {
-                    loadSmartSetting(camera, setting, function(data){
-                        results[setting] = data;
-                        complete();
-                    });
+
+                forAllAsync(k, (compvare, setting) => {
+                    loadSmartSetting(camera, setting)
+                        .then( (data) => {
+                            results[setting] = data;
+                            compvare();
+                        });
                 }, 1)
-                    .then(function () {
+                    .then( () => {
                         var currentStatus = {};
                         try {
                             for (var key in results) {
@@ -315,7 +353,7 @@ module.exports = function (config, onDevice, onStatus) {
                                             var line = result.LineItemList[a].LineItem[0];
 
                                             var newLine = [];
-                                            for (b in line.CoordinatesList) {
+                                            for (var b in line.CoordinatesList) {
                                                 var lineCoordinates = line.CoordinatesList[b].Coordinates;
                                                 for (var c in lineCoordinates) {
                                                     var xy = lineCoordinates[c];
@@ -344,7 +382,7 @@ module.exports = function (config, onDevice, onStatus) {
                                             var region = result.FieldDetectionRegionList[a].FieldDetectionRegion[0];
 
                                             var newRegion = [];
-                                            for (b in region.RegionCoordinatesList) {
+                                            for (var b in region.RegionCoordinatesList) {
                                                 var regionCoordinates = region.RegionCoordinatesList[b].RegionCoordinates;
                                                 for (var c in regionCoordinates) {
                                                     var xy = regionCoordinates[c];
@@ -362,90 +400,74 @@ module.exports = function (config, onDevice, onStatus) {
                             }
                             statusCache.set(camera.data.id, currentStatus);
                         }
-                        catch(e){
+                        catch (e) {
                             console.trace(e);
                         }
-                        complete();
+                        compvare();
                     });
             } else {
-                complete();
+                compvare();
             }
         }
 
-        forAllAsync( config.cameras, refreshCameraStatus, 10 )
-        .then(function () {
-            success();
-        });
-	};
-
-	this.system = function (params, success, error) {
-        console.log("Loading System");
-
-        var devices = [];
-
-        function loadCamera( complete, camera, i ) {
-            camera['baseUrl'] = 'http://' + camera.user + ':' + camera.password + '@' + camera.address + '/ISAPI';
-
-            get(camera.baseUrl + '/System/deviceInfo', function (info) {
-
-                var d = {};
-
-                d['name'] = info.DeviceInfo.deviceName[0];
-                d['id'] = info.DeviceInfo.deviceID[0];
-                d['where'] = { 'location' : info.DeviceInfo.deviceLocation[0] };
-                d['type'] = 'ip.camera';
-                d['current'] = {};
-
-                deviceCache.set(d['id'], d);
-
-                devices.push(d);
-
-                camera.data = d;
-
-                loadSmartCapabilities( camera, function(){
-                    complete();
-                });
-
-            }, function(error){
-                complete();
+        forAllAsync(config.cameras, refreshCameraStatus, 10)
+            .then(function () {
+                return;
             });
-        }
-
-        forAllAsync( config.cameras, loadCamera, 10 ).then(function () {
-            console.log('loaded all cameras');
-            success(devices)
-        });
-
     };
 
-	this.endPoints = {
-		"system": this.system,
-		"status": this.status,
-		"device/:id/status": this.device.get.status,
-		"camera/:id/alarm/enable": this.device.set.alarm.enable,
-		"camera/:id/alarm/disable": this.device.set.alarm.disable,
-		"camera/:id/image": this.device.get.image,
-        "camera/:id/stream": this.device.get.stream,
-	};
+    function loadCameras () {
+        console.log('Loading System');
 
-	this.system( {}, function() {
+        return new Promise( (fulfill, reject) => {
 
-		function updateStatus() {
+            var devices = [];
 
-			that.status({}, function (status) {
+            function loadCamera(compvare, camera) {
 
-				setTimeout(updateStatus, 5000);
+                camera['baseUrl'] = 'http://' + camera.user + ':' + camera.password + '@' + camera.address + '/ISAPI';
 
-			}, function(e){
-                console.log("status returned error => " + e);
-				setTimeout(updateStatus, 5000);
-			});
+                get(camera.baseUrl + '/System/deviceInfo')
+                    .then((info) => {
 
-		}
+                        var d = {};
 
-		setTimeout(updateStatus, 1000);
-	});
+                        d['name'] = info.DeviceInfo.deviceName[0];
+                        d['id'] = info.DeviceInfo.deviceID[0];
+                        d['where'] = {'location': info.DeviceInfo.deviceLocation[0]};
+                        d['type'] = 'ip.camera';
+                        d['current'] = {};
 
-	return this;
+                        deviceCache.set(d['id'], d);
+
+                        devices.push(d);
+
+                        camera.data = d;
+
+                        loadSmartCapabilities(camera)
+                            .then(() => {
+                                compvare();
+                            });
+                    })
+                    .catch((err)=>{
+                        reject(err);
+                    })
+            }
+
+            forAllAsync(config.cameras, loadCamera, 10).then(function () {
+                console.log('loaded all cameras');
+                fulfill(devices);
+            });
+
+        });
+    };
+
+    loadCameras()
+        .then( (devices) => {
+            setInterval(refreshCamerasStatus, 5000);
+        });
+
+
 }
 
+module.exports = hikvision;

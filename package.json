@@ -1,28 +1,43 @@
 {
-  "name": "hikvision",
-  "version": "1.0.0",
-  "description": "",
-  "main": "hikvision.js",
-  "scripts": {
-    "start": "node server.js"
-  },
-  "author": "",
-  "license": "ISC",
+  "name": "vera",
+  "version": "0.0.1",
+  "private": true,
+  "description": "New Swagger API Project",
+  "keywords": [],
+  "author": "cat",
+  "license": "",
+  "main": "app.js",
   "dependencies": {
-    "array.prototype.find": "^1.0.0",
-    "body-parser": "^1.14.2",
-    "deepmerge": "^0.2.10",
-    "express": "^4.13.3",
-    "express-ws": "^1.0.0-rc.2",
+    "array.prototype.find": "^2.0.0",
+    "body-parser": "^1.15.0",
+    "consul": "^0.27.0",
+    "cookie-parser": "^1.4.3",
+    "deepmerge": "^1.1.1",
+    "express": "^4.12.3",
     "forallasync": "^1.0.2",
-    "gm": "^1.22.0",
-    "node-cache": "^3.0.1",
-    "node-etcd": "^4.2.1",
+    "gm": "^1.23.0",
+    "jwt-verifier-client": "^1.0.4",
+    "newrelic": "^1.28.1",
+    "node-cache": "^4.1.0",
     "node-uuid": "^1.4.7",
-    "portfinder": "^1.0.3",
     "q": "^1.4.1",
-    "request": "^2.67.0",
-    "socket.io": "^1.4.4",
-    "xml2js": "^0.4.16"
+    "redis": "^2.6.2",
+    "request": "^2.75.0",
+    "superagent": "^1.8.3",
+    "superagent-proxy": "^1.0.0",
+    "swagger-express-mw": "^0.1.0",
+    "swagger-tools": "^0.10.1",
+    "xml2js": "^0.4.17"
+  },
+  "devDependencies": {
+    "chai": "^3.5.0",
+    "mocha": "^2.5.3",
+    "should": "^7.1.0",
+    "supertest": "^1.2.0",
+    "swagger-parser": "^3.4.1"
+  },
+  "scripts": {
+    "test": "mocha -b",
+    "start": "node app.js"
   }
 }
