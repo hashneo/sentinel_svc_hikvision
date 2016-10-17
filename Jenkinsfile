@@ -25,6 +25,6 @@ node {
 
         stage 'deploy'
         //sh 'docker service update --image  ${DOCKER_REGISTRY}/${CONTAINER1}:${BUILD} ${SERVICE_NAME}'
-        sh 'docker service create --name=${SERVICE_NAME} -e CONSUL=10.0.1.10 --replicas=1 --network=sentinel ${DOCKER_REGISTRY}/${CONTAINER1}:${BUILD}'
+        sh 'docker service create --name=${SERVICE_NAME} -e REDIS=10.0.1.10 -e CONSUL=10.0.1.10 --replicas=1 --network=sentinel ${DOCKER_REGISTRY}/${CONTAINER1}:${BUILD}'
     }
 }

@@ -10,7 +10,7 @@ function hikvision(config) {
 
     const redis = require('redis');
 
-    const pub = redis.createClient({ host: '10.0.1.10' });
+    const pub = redis.createClient({ host: process.env.REDIS });
 
     const request = require('request');
 

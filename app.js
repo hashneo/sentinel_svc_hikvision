@@ -48,7 +48,7 @@ SwaggerExpress.create(config, function (err, swaggerExpress) {
     // install middleware
     swaggerExpress.register(app);
 
-    var port = process.env.PORT || 5001;
+    var port = process.env.PORT || 5000;
     var server = app.listen(port, () => {
 
         let host = require('ip').address();
@@ -58,11 +58,11 @@ SwaggerExpress.create(config, function (err, swaggerExpress) {
             id: uuid.v4(),
             name: 'sentinel_hikvision',
             server: host,
-            port: port,
+            port: port/*,
             check:{
                 http: `http://${host}:${port}/health`,
                 interval:'15s'
-            }
+            }*/
         };
 
         consul.agent.service.register(module)
