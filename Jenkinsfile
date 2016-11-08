@@ -1,10 +1,10 @@
-env.ARCH = 'armv7'
-env.BUILD = '0.1.' + env.BUILD_NUMBER + '.' + env.ARCH
-env.LATEST = 'LATEST' + '.' + env.ARCH
+env.ARCH = 'arm'
+env.BUILD = '0.1.' + env.BUILD_NUMBER
+env.LATEST = 'latest'
 env.DOCKER_REGISTRY = 'steventaylor.me:5000'
-env.SERVICE_NAME = 'sentinel_hikvision'
-env.CONTAINER1 = env.SERVICE_NAME
-env.DOCKER_HOST = 'tcp://10.0.1.40:2375'
+env.SERVICE_NAME = 'sentinel-hikvision'
+env.CONTAINER1 = env.SERVICE_NAME + '-' + env.ARCH
+env.DOCKER_HOST = 'tcp://10.0.1.50:2375'
 
 node {
 
@@ -24,7 +24,17 @@ node {
         sh 'docker rmi ${DOCKER_REGISTRY}/${CONTAINER1}:${BUILD}'
 
         stage 'deploy'
-        sh 'docker service update --image  ${DOCKER_REGISTRY}/${CONTAINER1}:${BUILD} ${SERVICE_NAME}'
+        def r = sh ( script: 'kubectl get deployments/${SERVICE_NAME}', returnStatus: true )
+
+        if (r == 0){
+            // update the image
+            sh 'kubectl set image deployment/${SERVICE_NAME} ${SERVICE_NAME}=${DOCKER_REGISTRY}/${CONTAINER1}:${BUILD}'
+        } else {
+            // deploy service
+            sh 'sed -e "s/\\:latest/:${BUILD}/" ./kube.yml | kubectl create -f - --record'
+        }
+
+        //sh 'docker service update --image  ${DOCKER_REGISTRY}/${CONTAINER1}:${BUILD} ${SERVICE_NAME}'
         //sh 'docker service create --name=${SERVICE_NAME} -e REDIS=10.0.1.10 -e CONSUL=10.0.1.10 --replicas=1 --network=sentinel ${DOCKER_REGISTRY}/${CONTAINER1}:${BUILD}'
     }
 }
