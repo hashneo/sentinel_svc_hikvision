@@ -67,7 +67,7 @@ SwaggerExpress.create(config, function (err, swaggerExpress) {
         };
 
         process.env.SERVICE_ID = serviceId;
-
+/*
         consul.agent.service.register(module)
             .then((err, result) => {
                 if (err)
@@ -76,6 +76,7 @@ SwaggerExpress.create(config, function (err, swaggerExpress) {
             .catch((err) => {
                 throw err;
             })
+*/
     });
 
     if (swaggerExpress.runner.swagger.paths['/health']) {
