@@ -58,10 +58,10 @@ paths:
         default:
           $ref: '#/responses/Error'
 
-  /system:
+  /devices:
     x-swagger-router-controller: system
     get:
-      operationId: getSystem
+      operationId: getDevices
       security:
       - Oauth:
         - user
