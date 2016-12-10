@@ -30,11 +30,11 @@ function hikvision(config) {
 
 
     deviceCache.on( 'set', ( key, value ) => {
-        pub.publish('device.insert',  JSON.stringify( { module: 'hikvision', id : key, value : value } ) );
+        pub.publish('sentinel.device.insert',  JSON.stringify( { module: 'hikvision', id : key, value : value } ) );
     });
 
     statusCache.on( 'set', ( key, value ) => {
-        pub.publish('device.update',  JSON.stringify( { module: 'hikvision', id : key, value : value } ) );
+        pub.publish('sentinel.device.update',  JSON.stringify( { module: 'hikvision', id : key, value : value } ) );
     });
 
     function call(method, body, url) {
