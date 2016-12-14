@@ -4,7 +4,7 @@ env.LATEST = 'latest'
 env.DOCKER_REGISTRY = 'steventaylor.me:5000'
 env.SERVICE_NAME = 'sentinel-hikvision'
 env.CONTAINER1 = env.SERVICE_NAME + '-' + env.ARCH
-env.DOCKER_HOST = 'tcp://10.0.1.50:2375'
+env.DOCKER_HOST = 'tcp://build-arm.steventaylor.me:2375'
 
 node {
 
@@ -13,7 +13,7 @@ node {
         stage 'build'
         checkout scm
 
-        sh 'docker login -u ${dockeruser} -p ${dockerpass} -e user@domain.com ${DOCKER_REGISTRY}'
+        sh 'docker login -u ${dockeruser} -p ${dockerpass} ${DOCKER_REGISTRY}'
         sh 'docker build -t ${DOCKER_REGISTRY}/${CONTAINER1}:${LATEST} -t ${DOCKER_REGISTRY}/${CONTAINER1}:${BUILD} -f Dockerfile.${ARCH} .'
 
         stage 'push'
