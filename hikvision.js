@@ -10,7 +10,18 @@ function hikvision(config) {
 
     const redis = require('redis');
 
-    const pub = redis.createClient({ host: process.env.REDIS });
+    let pub = redis.createClient(
+        {
+            host: process.env.REDIS || global.config.redis || '127.0.0.1' ,
+            socket_keepalive: true,
+            retry_unfulfilled_commands: true
+        }
+    );
+
+    pub.on('end', function(e){
+        console.log('Redis hung up, committing suicide');
+        process.exit(1);
+    });
 
     const request = require('request');
 

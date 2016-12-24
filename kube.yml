@@ -37,9 +37,6 @@ spec:
               name: "PORT"
               value: "5000"
             -
-              name: "REDIS"
-              value: "10.0.1.10"
-            -
               name: "CONSUL"
               value: "10.0.1.10"
           ports:

@@ -35,6 +35,7 @@ consul.kv.get('config/sentinel/hikvision', function(err, result) {
 
     let config = JSON.parse(result.Value);
 
+    global.config = config;
     global.hikvision = require('./hikvision.js')(config);
 });
 
