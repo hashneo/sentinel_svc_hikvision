@@ -52,7 +52,7 @@ function hikvision(config) {
 
         return new Promise( (fulfill, reject) => {
 
-            var options = {
+            let options = {
                 method: method,
                 url: url,
                 encoding: null,
@@ -99,8 +99,8 @@ function hikvision(config) {
 
     function post(url, obj) {
 
-        var builder = new xml2js.Builder();
-        var xml = builder.buildObject(obj);
+        let builder = new xml2js.Builder();
+        let xml = builder.buildObject(obj);
 
         return call( 'PUT', xml, url );
     }
@@ -110,7 +110,7 @@ function hikvision(config) {
 
         return new Promise( (fulfill, reject) => {
 
-            var url = setting;
+            let url = setting;
             switch (setting) {
                 case 'ROI':
                 case 'AudioDetection':
@@ -120,7 +120,7 @@ function hikvision(config) {
 
             get(camera.baseUrl + '/Smart/' + url)
                 .then( (settings, body) => {
-                    var data = {
+                    let data = {
                         'parsed': settings,
                         'xml': body
                     };
@@ -159,10 +159,10 @@ function hikvision(config) {
 
                 .then((capabilities) => {
                     camera['capabilities'] = {};
-                    for (var cap in capabilities.SmartCap) {
-                        var match;
+                    for (let cap in capabilities.SmartCap) {
+                        let match;
                         if ((match = (/isSupport(\w+)/gi).exec(cap)) != null) {
-                            var feature = match[1];
+                            let feature = match[1];
                             if (capabilities.SmartCap[cap][0] === 'true') {
                                 camera['capabilities'][feature] = {};
                             }
@@ -177,8 +177,8 @@ function hikvision(config) {
     }
 
     function getCamera(id){
-        for(var i in config.cameras){
-            var camera = config.cameras[i];
+        for(let i in config.cameras){
+            let camera = config.cameras[i];
             if ( camera.data.id === id ){
                 return camera;
             }
@@ -197,9 +197,9 @@ function hikvision(config) {
                     if (err)
                         return reject(err);
 
-                    var data = [];
+                    let data = [];
 
-                    for (var key in values) {
+                    for (let key in values) {
                         data.push(values[key]);
                     }
 
@@ -239,94 +239,93 @@ function hikvision(config) {
 
         return new Promise( (fulfill, reject) => {
 
-            var camera = getCamera(id);
+            let camera = getCamera(id);
 
             get(camera.baseUrl + '/Streaming/channels/1/picture')
                 .then((data) => {
 
-                    var contentType = data.type;
+                    let contentType = data.type;
 
-                    var match = (/(\w+)\/(\w+)(?:;\s+charset)*/gi).exec(contentType);
+                    let match = (/(\w+)\/(\w+)(?:;\s+charset)*/gi).exec(contentType);
                     if (!match)
                         return reject('unknown content type => ' + contentType);
 
-                    var imageType = match[2];
+                    let imageType = match[2];
 
-                    var buffer = data.image;
-                    var image = gm(buffer);
-
-                    var size;
+                    let buffer = data.image;
+                    let image = gm(buffer);
 
                     function scaleImage(image, width, height) {
                         return new Promise((fulfill, reject) => {
-                            if (width !== undefined || height !== undefined) {
 
-                            var newWidth = width;
-                            var newHeight = height;
+                            image.size((err, size) => {
+                                if (err)
+                                    return reject(err);
 
+                                if (width !== undefined || height !== undefined) {
 
-                                if (newHeight === undefined)
-                                    newHeight = ( size.height / size.width ) * newWidth;
-                                if (newWidth === undefined)
-                                    newWidth = ( size.width / size.height ) * newHeight;
+                                let newWidth = width;
+                                let newHeight = height;
 
-                                image.resize(newWidth, newHeight)
-                                fulfill(image);
+                                    if (newHeight === undefined)
+                                        newHeight = ( size.height / size.width ) * newWidth;
+                                    if (newWidth === undefined)
+                                        newWidth = ( size.width / size.height ) * newHeight;
 
-                            }else {
-                                fulfill(image);
-                            }
-                        });
+                                    image.resize(newWidth, newHeight);
+
+                                    fulfill( {image, size: {width : newWidth, height: newHeight}});
+
+                                }else {
+                                    fulfill( {image, size} );
+                                }
+                            });
+
+                        })
                     }
 
-                    image.size((err, _size) => {
-                        if (err)
-                            return reject(err);
-                        size = _size;
+                    scaleImage( image, width, height )
+                        .then( (i) => {
+                            return new Promise( (fulfill, reject) => {
+                                let currentStatus = statusCache.get(id);
 
-                        scaleImage(image, width, height)
-                            .then((image) => {
-                                return new Promise((fulfill, reject) => {
-                                    var currentStatus = statusCache.get(id);
+                                if (currentStatus !== undefined ) {
 
-                                    if (currentStatus !== undefined) {
+                                    if (currentStatus.LineDetection !== undefined && currentStatus.LineDetection.enabled) {
+                                        for (let x in currentStatus.LineDetection.lines) {
+                                            let line = currentStatus.LineDetection.lines[x];
 
-                                        if (currentStatus.LineDetection !== undefined && currentStatus.LineDetection.enabled) {
-                                            for (var i in currentStatus.LineDetection.lines) {
-                                                var line = currentStatus.LineDetection.lines[i];
+                                            let s = {
+                                                x: Math.round(line[0].x * i.size.width),
+                                                y: Math.round(line[0].y * i.size.height)
+                                            }; // Start
+                                            let e = {
+                                                x: Math.round(line[1].x * i.size.width),
+                                                y: Math.round(line[1].y * i.size.height)
+                                            }; // End
 
-                                                var s = {
-                                                    x: Math.round(line[0].x * size.width),
-                                                    y: Math.round(line[0].y * size.height)
-                                                }; // Start
-                                                var e = {
-                                                    x: Math.round(line[1].x * size.width),
-                                                    y: Math.round(line[1].y * size.height)
-                                                }; // End
-
-                                                image
-                                                    .stroke('#FF000080', 20)
-                                                    .drawLine(s.x, s.y, e.x, e.y);
-                                            }
+                                            i.image
+                                                .stroke('#FF000080', i.size.width > 1000 ? 20 : 5)
+                                                .drawLine(s.x, s.y, e.x, e.y);
                                         }
                                     }
+                                }
 
-                                    fulfill(image);
-                                })
+                                fulfill(i);
                             })
-                            .then((image) => {
-                                image.toBuffer(imageType, (err, buffer) => {
-                                    if (err)
-                                        return reject(err);
+                        })
+                        .then( (i) => {
+                            i.image.toBuffer(imageType, (err, buffer) => {
+                                if (err)
+                                    return reject(err);
 
-                                    return fulfill({'type': 'image/' + imageType, 'image': buffer});
-                                });
-                            })
-                            .catch((err) => {
-                                console.trace(err);
-                                reject(err);
+                                return fulfill({'type': 'image/' + imageType, 'image': buffer});
                             });
-                    });
+                        })
+                        .catch( (err) => {
+                            console.trace(err);
+                            reject(err);
+                        });
                 })
                 .catch( (err) => {
                     console.trace(err);
@@ -337,44 +336,47 @@ function hikvision(config) {
 
     function refreshCamerasStatus () {
 
-        function refreshCameraStatus(compvare, camera) {
+        function refreshCameraStatus(complete, camera) {
             if (Object.keys(camera['capabilities']).length > 0) {
-                var k = Object.keys(camera['capabilities']);
-                var results = {};
+                let k = Object.keys(camera['capabilities']);
+                let results = {};
 
-                forAllAsync(k, (compvare, setting) => {
+                forAllAsync(k, (complete, setting) => {
                     loadSmartSetting(camera, setting)
                         .then( (data) => {
                             results[setting] = data;
-                            compvare();
+                            complete();
                         });
                 }, 1)
                     .then( () => {
-                        var currentStatus = {};
+                        let currentStatus = {};
                         try {
-                            for (var key in results) {
+                            for (let key in results) {
+                                let result;
+                                let _x, _y;
+
                                 switch (key) {
                                     case 'LineDetection':
                                         if (currentStatus[key] === undefined) currentStatus[key] = {};
-                                        var result = results[key]['parsed'][key + 'List'][key][0];
+                                        result = results[key]['parsed'][key + 'List'][key][0];
 
                                         currentStatus[key]['enabled'] = Boolean(result.enabled[0] === 'true');
 
-                                        var _x = parseInt(result.normalizedScreenSize[0].normalizedScreenWidth[0]);
-                                        var _y = parseInt(result.normalizedScreenSize[0].normalizedScreenHeight[0]);
+                                        _x = parseInt(result.normalizedScreenSize[0].normalizedScreenWidth[0]);
+                                        _y = parseInt(result.normalizedScreenSize[0].normalizedScreenHeight[0]);
 
                                         currentStatus[key]['lines'] = [];
 
-                                        for (var a in result.LineItemList) {
-                                            var line = result.LineItemList[a].LineItem[0];
+                                        for (let a in result.LineItemList) {
+                                            let line = result.LineItemList[a].LineItem[0];
 
-                                            var newLine = [];
-                                            for (var b in line.CoordinatesList) {
-                                                var lineCoordinates = line.CoordinatesList[b].Coordinates;
-                                                for (var c in lineCoordinates) {
-                                                    var xy = lineCoordinates[c];
-                                                    var x = parseInt(xy.positionX[0]);
-                                                    var y = parseInt(xy.positionY[0]);
+                                            let newLine = [];
+                                            for (let b in line.CoordinatesList) {
+                                                let lineCoordinates = line.CoordinatesList[b].Coordinates;
+                                                for (let c in lineCoordinates) {
+                                                    let xy = lineCoordinates[c];
+                                                    let x = parseInt(xy.positionX[0]);
+                                                    let y = parseInt(xy.positionY[0]);
 
                                                     newLine.push({'x': x / _x, 'y': 1 - (y / _y)});
                                                 }
@@ -387,23 +389,23 @@ function hikvision(config) {
                                         if (currentStatus[key] === undefined) currentStatus[key] = {};
                                         currentStatus[key]['enabled'] = Boolean(results[key]['parsed'][key + 'List'][key][0]['enabled'][0] === 'true');
 
-                                        var result = results[key]['parsed'][key + 'List'][key][0];
+                                        result = results[key]['parsed'][key + 'List'][key][0];
 
-                                        var _x = parseInt(result.normalizedScreenSize[0].normalizedScreenWidth[0]);
-                                        var _y = parseInt(result.normalizedScreenSize[0].normalizedScreenHeight[0]);
+                                        _x = parseInt(result.normalizedScreenSize[0].normalizedScreenWidth[0]);
+                                        _y = parseInt(result.normalizedScreenSize[0].normalizedScreenHeight[0]);
 
                                         currentStatus[key]['regions'] = [];
 
-                                        for (var a in result.FieldDetectionRegionList) {
-                                            var region = result.FieldDetectionRegionList[a].FieldDetectionRegion[0];
+                                        for (let a in result.FieldDetectionRegionList) {
+                                            let region = result.FieldDetectionRegionList[a].FieldDetectionRegion[0];
 
-                                            var newRegion = [];
-                                            for (var b in region.RegionCoordinatesList) {
-                                                var regionCoordinates = region.RegionCoordinatesList[b].RegionCoordinates;
-                                                for (var c in regionCoordinates) {
-                                                    var xy = regionCoordinates[c];
-                                                    var x = parseInt(xy.positionX[0]);
-                                                    var y = parseInt(xy.positionY[0]);
+                                            let newRegion = [];
+                                            for (let b in region.RegionCoordinatesList) {
+                                                let regionCoordinates = region.RegionCoordinatesList[b].RegionCoordinates;
+                                                for (let c in regionCoordinates) {
+                                                    let xy = regionCoordinates[c];
+                                                    let x = parseInt(xy.positionX[0]);
+                                                    let y = parseInt(xy.positionY[0]);
 
                                                     newRegion.push({'x': x / _x, 'y': 1 - (y / _y)});
                                                 }
@@ -419,10 +421,10 @@ function hikvision(config) {
                         catch (e) {
                             console.trace(e);
                         }
-                        compvare();
+                        complete();
                     });
             } else {
-                compvare();
+                complete();
             }
         }
 
@@ -437,16 +439,16 @@ function hikvision(config) {
 
         return new Promise( (fulfill, reject) => {
 
-            var devices = [];
+            let devices = [];
 
-            function loadCamera(compvare, camera) {
+            function loadCamera(complete, camera) {
 
                 camera['baseUrl'] = 'http://' + camera.user + ':' + camera.password + '@' + camera.address + '/ISAPI';
 
                 get(camera.baseUrl + '/System/deviceInfo')
                     .then((info) => {
 
-                        var d = {};
+                        let d = {};
 
                         d['name'] = info.DeviceInfo.deviceName[0];
                         d['id'] = info.DeviceInfo.deviceID[0];
@@ -462,7 +464,7 @@ function hikvision(config) {
 
                         loadSmartCapabilities(camera)
                             .then(() => {
-                                compvare();
+                                complete();
                             });
                     })
                     .catch((err)=>{
