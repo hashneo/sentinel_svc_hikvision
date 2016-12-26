@@ -255,75 +255,78 @@ function hikvision(config) {
                     var buffer = data.image;
                     var image = gm(buffer);
 
+                    var size;
+
                     function scaleImage(image, width, height) {
                         return new Promise((fulfill, reject) => {
-
                             if (width !== undefined || height !== undefined) {
 
-                                var newWidth = width;
-                                var newHeight = height;
+                            var newWidth = width;
+                            var newHeight = height;
 
-                                image.size((err, size) => {
 
-                                    if (err)
-                                        return reject(err);
+                                if (newHeight === undefined)
+                                    newHeight = ( size.height / size.width ) * newWidth;
+                                if (newWidth === undefined)
+                                    newWidth = ( size.width / size.height ) * newHeight;
 
-                                    if (newHeight === undefined)
-                                        newHeight = ( size.height / size.width ) * newWidth;
-                                    if (newWidth === undefined)
-                                        newWidth = ( size.width / size.height ) * newHeight;
+                                image.resize(newWidth, newHeight)
+                                fulfill(image);
 
-                                    image.resize(newWidth, newHeight)
-                                    fulfill(image);
-                                });
                             }else {
                                 fulfill(image);
                             }
-                        })
-                    };
+                        });
+                    }
 
-                    scaleImage( image, width, height )
-                        .then( (image) => {
-                            return new Promise( (fulfill, reject) => {
-                                var currentStatus = statusCache.get(id);
+                    image.size((err, _size) => {
+                        if (err)
+                            return reject(err);
+                        size = _size;
 
-                                if (currentStatus !== undefined ) {
+                        scaleImage(image, width, height)
+                            .then((image) => {
+                                return new Promise((fulfill, reject) => {
+                                    var currentStatus = statusCache.get(id);
 
-                                    if (currentStatus.LineDetection !== undefined && currentStatus.LineDetection.enabled) {
-                                        for (var i in currentStatus.LineDetection.lines) {
-                                            var line = currentStatus.LineDetection.lines[i];
+                                    if (currentStatus !== undefined) {
 
-                                            var s = {
-                                                x: Math.round(line[0].x * size.width),
-                                                y: Math.round(line[0].y * size.height)
-                                            }; // Start
-                                            var e = {
-                                                x: Math.round(line[1].x * size.width),
-                                                y: Math.round(line[1].y * size.height)
-                                            }; // End
+                                        if (currentStatus.LineDetection !== undefined && currentStatus.LineDetection.enabled) {
+                                            for (var i in currentStatus.LineDetection.lines) {
+                                                var line = currentStatus.LineDetection.lines[i];
 
-                                            image
-                                                .stroke('#FF000080', 20)
-                                                .drawLine(s.x, s.y, e.x, e.y);
+                                                var s = {
+                                                    x: Math.round(line[0].x * size.width),
+                                                    y: Math.round(line[0].y * size.height)
+                                                }; // Start
+                                                var e = {
+                                                    x: Math.round(line[1].x * size.width),
+                                                    y: Math.round(line[1].y * size.height)
+                                                }; // End
+
+                                                image
+                                                    .stroke('#FF000080', 20)
+                                                    .drawLine(s.x, s.y, e.x, e.y);
+                                            }
                                         }
                                     }
-                                }
 
-                                fulfill(image);
+                                    fulfill(image);
+                                })
                             })
-                        })
-                        .then( (image) => {
-                            image.toBuffer(imageType, (err, buffer) => {
-                                if (err)
-                                    return reject(err);
+                            .then((image) => {
+                                image.toBuffer(imageType, (err, buffer) => {
+                                    if (err)
+                                        return reject(err);
 
-                                return fulfill({'type': 'image/' + imageType, 'image': buffer});
+                                    return fulfill({'type': 'image/' + imageType, 'image': buffer});
+                                });
+                            })
+                            .catch((err) => {
+                                console.trace(err);
+                                reject(err);
                             });
-                        })
-                        .catch( (err) => {
-                            console.trace(err);
-                            reject(err);
-                        });
+                    });
                 })
                 .catch( (err) => {
                     console.trace(err);
