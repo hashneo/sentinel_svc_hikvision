@@ -6,6 +6,8 @@ WORKDIR /app
 
 RUN apt-get update && apt-get install -y iputils-ping net-tools
 
+RUN apt-get install -y graphicsmagick imagemagick
+
 RUN npm install
 
 ENTRYPOINT ["npm", "start"]

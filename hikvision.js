@@ -321,10 +321,12 @@ function hikvision(config) {
                             });
                         })
                         .catch( (err) => {
+                            console.trace(err);
                             reject(err);
                         });
                 })
                 .catch( (err) => {
+                    console.trace(err);
                     reject(err);
                 });
         });
