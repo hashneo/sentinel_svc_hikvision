@@ -323,12 +323,12 @@ function hikvision(config) {
                             });
                         })
                         .catch( (err) => {
-                            console.trace(err);
+                            console.error(err);
                             reject(err);
                         });
                 })
                 .catch( (err) => {
-                    console.trace(err);
+                    console.error(err);
                     reject(err);
                 });
         });
