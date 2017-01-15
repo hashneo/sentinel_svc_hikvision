@@ -39,7 +39,6 @@ function hikvision(config) {
 
     const gm = require('gm').subClass({imageMagick: true});
 
-
     deviceCache.on( 'set', ( key, value ) => {
         pub.publish('sentinel.device.insert',  JSON.stringify( { module: 'hikvision', id : key, value : value } ) );
     });
@@ -197,17 +196,27 @@ function hikvision(config) {
                     if (err)
                         return reject(err);
 
-                    let data = [];
+                    statusCache.mget( ids, (err, statuses) => {
+                        if (err)
+                            return reject(err);
 
-                    for (let key in values) {
-                        data.push(values[key]);
-                    }
+                        let data = [];
 
-                    fulfill(data);
+                        for (let key in values) {
+                            let v = values[key];
+
+                            if ( statuses[key] ) {
+                                v.current = statuses[key];
+                                data.push(v);
+                            }
+                        }
+
+                        fulfill(data);
+                    });
+
                 });
             });
         });
-
     };
 
     this.getDeviceStatus = (id) => {
@@ -346,6 +355,10 @@ function hikvision(config) {
                         .then( (data) => {
                             results[setting] = data;
                             complete();
+                        })
+                        .catch( (err) => {
+                            console.error(err);
+                            complete();
                         });
                 }, 1)
                     .then( () => {
@@ -355,17 +368,26 @@ function hikvision(config) {
                                 let result;
                                 let _x, _y;
 
+                                if (!currentStatus['detection']){
+                                    currentStatus['detection'] = {}
+                                }
+
+                                let status = currentStatus['detection'];
+
                                 switch (key) {
                                     case 'LineDetection':
-                                        if (currentStatus[key] === undefined) currentStatus[key] = {};
+
+                                        if (!status['line'])
+                                            status['line'] = {};
+
                                         result = results[key]['parsed'][key + 'List'][key][0];
 
-                                        currentStatus[key]['enabled'] = Boolean(result.enabled[0] === 'true');
+                                        status['line']['enabled'] = Boolean(result.enabled[0] === 'true');
 
                                         _x = parseInt(result.normalizedScreenSize[0].normalizedScreenWidth[0]);
                                         _y = parseInt(result.normalizedScreenSize[0].normalizedScreenHeight[0]);
 
-                                        currentStatus[key]['lines'] = [];
+                                        status['line']['lines'] = [];
 
                                         for (let a in result.LineItemList) {
                                             let line = result.LineItemList[a].LineItem[0];
@@ -382,19 +404,22 @@ function hikvision(config) {
                                                 }
                                             }
 
-                                            currentStatus[key]['lines'].push(newLine);
+                                            status['line']['lines'].push(newLine);
                                         }
                                         break;
                                     case 'FieldDetection':
-                                        if (currentStatus[key] === undefined) currentStatus[key] = {};
-                                        currentStatus[key]['enabled'] = Boolean(results[key]['parsed'][key + 'List'][key][0]['enabled'][0] === 'true');
+
+                                        if (!status['field'])
+                                            status['field'] = {};
+
+                                        status['field']['enabled'] = Boolean(results[key]['parsed'][key + 'List'][key][0]['enabled'][0] === 'true');
 
                                         result = results[key]['parsed'][key + 'List'][key][0];
 
                                         _x = parseInt(result.normalizedScreenSize[0].normalizedScreenWidth[0]);
                                         _y = parseInt(result.normalizedScreenSize[0].normalizedScreenHeight[0]);
 
-                                        currentStatus[key]['regions'] = [];
+                                        status['field']['regions'] = [];
 
                                         for (let a in result.FieldDetectionRegionList) {
                                             let region = result.FieldDetectionRegionList[a].FieldDetectionRegion[0];
@@ -411,7 +436,8 @@ function hikvision(config) {
                                                 }
                                             }
 
-                                            currentStatus[key]['regions'].push(newRegion);
+                                            if ( newRegion.length > 0)
+                                                status['field']['regions'].push(newRegion);
                                         }
                                         break;
                                 }
@@ -422,7 +448,7 @@ function hikvision(config) {
                             console.trace(e);
                         }
                         complete();
-                    });
+                    })
             } else {
                 complete();
             }
@@ -430,9 +456,8 @@ function hikvision(config) {
 
         forAllAsync(config.cameras, refreshCameraStatus, 10)
             .then(function () {
-                return;
             });
-    };
+    }
 
     function loadCameras () {
         console.log('Loading System');
@@ -483,8 +508,11 @@ function hikvision(config) {
     loadCameras()
         .then( (devices) => {
             setInterval(refreshCamerasStatus, 5000);
+        })
+        .catch( (err) => {
+            console.error(err);
+            process.exit(1);
         });
-
 
 }
 

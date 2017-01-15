@@ -108,7 +108,7 @@ paths:
         default:
           $ref: '#/responses/Error'
 
-  /camera/{id}/alarm/{mode}/{state}:
+  /camera/{id}/detection/{mode}/{state}:
     x-swagger-router-controller: camera
     get:
       operationId: setCameraArmedMode
