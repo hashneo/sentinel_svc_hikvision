@@ -298,11 +298,11 @@ function hikvision(config) {
                             return new Promise( (fulfill, reject) => {
                                 let currentStatus = statusCache.get(id);
 
-                                if (currentStatus !== undefined ) {
+                                if (currentStatus !== undefined && currentStatus.detection !== undefined) {
 
-                                    if (currentStatus.LineDetection !== undefined && currentStatus.LineDetection.enabled) {
-                                        for (let x in currentStatus.LineDetection.lines) {
-                                            let line = currentStatus.LineDetection.lines[x];
+                                    if (currentStatus.detection.line !== undefined && currentStatus.detection.line.enabled) {
+                                        for (let x in currentStatus.detection.line.lines) {
+                                            let line = currentStatus.detection.line.lines[x];
 
                                             let s = {
                                                 x: Math.round(line[0].x * i.size.width),
