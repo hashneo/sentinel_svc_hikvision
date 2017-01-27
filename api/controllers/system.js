@@ -10,8 +10,14 @@ module.exports.getDevices = (req, res) => {
         });
 };
 
-module.exports.getStatus = (req, res) => {
-
+module.exports.Reload = (req, res) => {
+    global.hikvision.Reload()
+        .then( () => {
+            res.json( { data: {}, result : 'ok'  } );
+        })
+        .catch( (err) => {
+            res.status(500).json( { code: err.code || 0, message: err.message } );
+        });
 };
 
 module.exports.getDeviceStatus = (req, res) => {

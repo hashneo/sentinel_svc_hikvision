@@ -459,10 +459,21 @@ function hikvision(config) {
             });
     }
 
+    var timerId;
+
     function loadCameras () {
-        console.log('Loading System');
 
         return new Promise( (fulfill, reject) => {
+
+            console.log("Loading System..");
+
+            if ( timerId ) {
+                clearTimeout(timerId);
+                timerId = 0;
+            }
+
+            deviceCache.flushAll();
+            statusCache.flushAll();
 
             let devices = [];
 
@@ -494,20 +505,26 @@ function hikvision(config) {
                     })
                     .catch((err)=>{
                         reject(err);
+                        process.exit(1);
                     })
             }
 
             forAllAsync(config.cameras, loadCamera, 10).then(function () {
                 console.log('loaded all cameras');
+                refreshCamerasStatus();
                 fulfill(devices);
+                timerId = setInterval(refreshCamerasStatus, 5000);
             });
 
         });
+    }
+
+    this.Reload = () => {
+        return loadCameras();
     };
 
     loadCameras()
         .then( (devices) => {
-            setInterval(refreshCamerasStatus, 5000);
         })
         .catch( (err) => {
             console.error(err);
