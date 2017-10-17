@@ -10,10 +10,10 @@ module.exports.setCameraArmedMode = (req, res) => {
 
     switch (mode){
         case 'line':
-            callFunction = global.hikvision.setLineDetection(id, state === 'enable');
+            callFunction = global.module.setLineDetection(id, state === 'enable');
             break;
         case 'field':
-            callFunction = global.hikvision.setFieldDetection(id, state === 'enable');
+            callFunction = global.module.setFieldDetection(id, state === 'enable');
             break;
     };
 
@@ -33,7 +33,7 @@ module.exports.getCameraImage = (req, res) => {
     let width = req.swagger.params.width.value;
     let height = req.swagger.params.height.value;
 
-    global.hikvision.getImage(id, width, height)
+    global.module.getImage(id, width, height)
         .then((data) => {
             res.type(data.type);
             res.send(new Buffer(data.image, 'binary'));
