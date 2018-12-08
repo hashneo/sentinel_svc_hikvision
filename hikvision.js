@@ -46,7 +46,7 @@ function hikvision(config) {
     statusCache.on( 'set', ( key, value ) => {
         if ( value.detection ) {
             if ( value.detection.field ) delete value.detection.field.regions;
-            if ( value.detection.line  ) delete value.detection.line.regions;
+            if ( value.detection.line  ) delete value.detection.line.lines;
         }
         pub.publish('sentinel.device.update',  JSON.stringify( { module: 'hikvision', id : key, value : value } ) );
     });
