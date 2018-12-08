@@ -46,7 +46,7 @@ function hikvision(config) {
     statusCache.on( 'set', ( key, value ) => {
         if ( value.detection ) {
             if ( value.detection.field ) delete value.detection.field.regions;
-            if ( value.detection.lines ) delete value.detection.lines.regions;
+            if ( value.detection.line  ) delete value.detection.line.regions;
         }
         pub.publish('sentinel.device.update',  JSON.stringify( { module: 'hikvision', id : key, value : value } ) );
     });
@@ -412,7 +412,7 @@ function hikvision(config) {
                                         }
                                         break;
                                     case 'FieldDetection':
-
+/*
                                         if (!status['field'])
                                             status['field'] = {};
 
@@ -444,6 +444,7 @@ function hikvision(config) {
                                                 status['field']['regions'].push(newRegion);
                                         }
                                         break;
+*/
                                 }
                             }
                             statusCache.set(camera.data.id, currentStatus);
