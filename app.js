@@ -68,6 +68,8 @@ consul.kv.get(`config/sentinel/${moduleName}`, function(err, result) {
         // install middleware
         swaggerExpress.register(app);
 
+        const logger = require('sentinel-common').logger;
+
         let serviceId = process.env.SERVICE_ID || uuid.v4();
 
         let port = process.env.PORT || undefined;
@@ -108,7 +110,7 @@ consul.kv.get(`config/sentinel/${moduleName}`, function(err, result) {
                 }, 5000 );
 
                 if (swaggerExpress.runner.swagger.paths['/health']) {
-                    console.log(`you can get /health?id=${serviceId} on port ${port}`);
+                    logger.info(`you can get /health?id=${serviceId} on port ${port}`);
                 }
                 global.module = require(`./${moduleName}.js`)(config);
             });

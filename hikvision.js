@@ -19,7 +19,7 @@ function hikvision(config) {
     );
 
     pub.on('end', function(e){
-        console.log('Redis hung up, committing suicide');
+        logger.error('Redis hung up, committing suicide');
         process.exit(1);
     });
 
@@ -39,16 +39,23 @@ function hikvision(config) {
 
     const gm = require('gm').subClass({imageMagick: true});
 
+    const logger = require('sentinel-common').logger;
+
     deviceCache.on( 'set', ( key, value ) => {
         pub.publish('sentinel.device.insert',  JSON.stringify( { module: 'hikvision', id : key, value : value } ) );
     });
 
     statusCache.on( 'set', ( key, value ) => {
         if ( value.detection ) {
-            if ( value.detection.field ) delete value.detection.field.regions;
-            if ( value.detection.line  ) delete value.detection.line.lines;
+            //if ( value.detection.field ) delete value.detection.field.regions;
+            //if ( value.detection.line  ) delete value.detection.line.lines;
         }
-        pub.publish('sentinel.device.update',  JSON.stringify( { module: 'hikvision', id : key, value : value } ) );
+
+        let data = JSON.stringify( { module: 'hikvision', id : key, value : value } );
+
+        logger.debug(data);
+
+        pub.publish('sentinel.device.update', data );
     });
 
     function call(method, body, url) {
@@ -85,12 +92,12 @@ function hikvision(config) {
                             }
                         }
                     } else {
-                        console.log('request failed => ' + err);
+                        logger.error('request failed => ' + err);
                         reject(err || body.toString('utf8'));
                     }
                 });
             } catch (e) {
-                console.log('request error => ' + e);
+                logger.error('request error => ' + e);
                 reject(e);
             }
         });
@@ -336,12 +343,12 @@ function hikvision(config) {
                             });
                         })
                         .catch( (err) => {
-                            console.error(err);
+                            logger.error(err);
                             reject(err);
                         });
                 })
                 .catch( (err) => {
-                    console.error(err);
+                    logger.error(err);
                     reject(err);
                 });
         });
@@ -361,7 +368,7 @@ function hikvision(config) {
                             complete();
                         })
                         .catch( (err) => {
-                            console.error(err);
+                            logger.error(err);
                             complete();
                         });
                 }, 1)
@@ -412,7 +419,6 @@ function hikvision(config) {
                                         }
                                         break;
                                     case 'FieldDetection':
-/*
                                         if (!status['field'])
                                             status['field'] = {};
 
@@ -444,13 +450,12 @@ function hikvision(config) {
                                                 status['field']['regions'].push(newRegion);
                                         }
                                         break;
-*/
                                 }
                             }
                             statusCache.set(camera.data.id, currentStatus);
                         }
                         catch (e) {
-                            console.trace(e);
+                            logger.error(e);
                         }
                         complete();
                     })
@@ -465,7 +470,7 @@ function hikvision(config) {
     }
 
     function loadCameras () {
-        console.log('Loading System');
+        logger.info('Loading System');
 
         return new Promise( (fulfill, reject) => {
 
@@ -503,7 +508,7 @@ function hikvision(config) {
             }
 
             forAllAsync(config.cameras, loadCamera, 10).then(function () {
-                console.log('loaded all cameras');
+                logger.info('loaded all cameras');
                 fulfill(devices);
             });
 
@@ -521,7 +526,7 @@ function hikvision(config) {
             setInterval(refreshCamerasStatus, 5000);
         })
         .catch( (err) => {
-            console.error(err);
+            logger.error(err);
             process.exit(1);
         });
 
