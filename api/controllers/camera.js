@@ -32,7 +32,7 @@ module.exports.getCameraStream = (req, res) => {
 
     global.module.getStream(id)
         .then((endpoint) => {
-            res.json( { data: { status: endpoint }, result : 'ok' } );
+            res.json( { data: { endpoint: endpoint }, result : 'ok' } );
         })
         .catch((err) => {
             res.status(500).json({code: err.code || 0, message: err.message});
