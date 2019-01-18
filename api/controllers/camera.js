@@ -26,6 +26,18 @@ module.exports.setCameraArmedMode = (req, res) => {
         });
 };
 
+module.exports.getCameraStream = (req, res) => {
+
+    let id = req.swagger.params.id.value;
+
+    global.module.getStream(id)
+        .then((endpoint) => {
+            res.json( { data: { status: endpoint }, result : 'ok' } );
+        })
+        .catch((err) => {
+            res.status(500).json({code: err.code || 0, message: err.message});
+        });
+};
 
 module.exports.getCameraImage = (req, res) => {
 

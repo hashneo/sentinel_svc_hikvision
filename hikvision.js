@@ -41,6 +41,8 @@ function hikvision(config) {
 
     const logger = require('sentinel-common').logger;
 
+    const fs = require('fs');
+
     deviceCache.on( 'set', ( key, value ) => {
         pub.publish('sentinel.device.insert',  JSON.stringify( { module: 'hikvision', id : key, value : value } ) );
     });
@@ -325,7 +327,7 @@ function hikvision(config) {
                                             }; // End
 
                                             i.image
-                                                .stroke('#FF000080', i.size.width > 1000 ? 20 : 5)
+                                                 .stroke('#FF000080', i.size.width > 1000 ? 20 : 5)
                                                 .drawLine(s.x, s.y, e.x, e.y);
                                         }
                                     }
@@ -351,6 +353,39 @@ function hikvision(config) {
                     logger.error(err);
                     reject(err);
                 });
+        });
+    };
+
+    this.getStream = (id) => {
+        return new Promise((fulfill, reject) => {
+            let c = getCamera(id);
+
+            let options = {
+                method: 'POST',
+                url: 'https://home.steventaylor.me/stream/',
+                encoding: null,
+                timeout: 30000,
+                json: true,
+                body: {
+                    source : c.streamUrl
+                }
+            };
+
+            try {
+                request(options, function (err, response, body) {
+                    if (!err && response.statusCode === 200) {
+                        fulfill(body.data.endpoint);
+                    } else {
+                        if (!err)
+                            err = body.toString('utf8');
+                        logger.error('request failed => ' + err)
+                        reject(err);
+                    }
+                });
+            } catch (e) {
+                logger.error('request error => ' + e);
+                reject(e);
+            }
         });
     };
 
@@ -478,7 +513,8 @@ function hikvision(config) {
 
             function loadCamera(complete, camera) {
 
-                camera['baseUrl'] = 'http://' + camera.user + ':' + camera.password + '@' + camera.address + '/ISAPI';
+                camera.baseUrl = 'http://' + camera.user + ':' + camera.password + '@' + camera.address + '/ISAPI';
+                camera.streamUrl = 'rtsp://' + camera.user + ':' + camera.password + '@' + camera.address + '/Streaming/channels/101/';
 
                 get(camera.baseUrl + '/System/deviceInfo')
                     .then((info) => {
@@ -522,7 +558,9 @@ function hikvision(config) {
     };
 
     loadCameras()
-        .then( (devices) => {
+        .then( (devices) =>{
+        })
+        .then( () => {
             setInterval(refreshCamerasStatus, 5000);
         })
         .catch( (err) => {
