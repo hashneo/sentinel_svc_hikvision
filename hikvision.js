@@ -367,7 +367,8 @@ function hikvision(config) {
                 timeout: 30000,
                 json: true,
                 body: {
-                    source : c.streamUrl
+                    source : c.streamUrl,
+                    type : 'live'
                 }
             };
 
