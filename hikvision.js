@@ -259,7 +259,13 @@ function hikvision(config) {
 
     this.setMotionDetection = (id, enabled) => {
         return new Promise( (fulfill, reject) => {
-            fulfill();
+            fulfill('not implemented');
+        });
+    };
+
+    this.setPrivacy = (id, enabled) => {
+        return new Promise( (fulfill, reject) => {
+            fulfill('not implemented');
         });
     };
 

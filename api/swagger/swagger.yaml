@@ -142,26 +142,6 @@ paths:
         default:
           $ref: '#/responses/Error'
 
-  /camera/{id}/stream:
-    x-swagger-router-controller: camera
-    get:
-      operationId: getCameraStream
-      security:
-      - Oauth:
-        - user
-      parameters:
-      - in: path
-        name: id
-        required: true
-        type: string
-      responses:
-        200:
-          description: ok
-          schema:
-            type: object
-        default:
-          $ref: '#/responses/Error'
-
   /camera/{id}/image:
     x-swagger-router-controller: camera
     get:
@@ -188,6 +168,54 @@ paths:
           schema:
             type: string
             format: byte
+        default:
+          $ref: '#/responses/Error'
+
+  /camera/{id}/stream:
+    x-swagger-router-controller: camera
+    get:
+      operationId: getCameraStream
+      security:
+      - Oauth:
+        - user
+      parameters:
+      - in: path
+        name: id
+        required: true
+        type: string
+      responses:
+        200:
+          description: ok
+          schema:
+            type: object
+        default:
+          $ref: '#/responses/Error'
+
+  /camera/{id}/{state}:
+    x-swagger-router-controller: camera
+    get:
+      operationId: setCameraState
+      security:
+      - Oauth:
+        - user
+      parameters:
+      - in: path
+        name: id
+        required: true
+        type: string
+      - in: path
+        name: state
+        required: true
+        type: string
+        enum: [
+          enable,
+          disable
+        ]
+      responses:
+        200:
+          description: ok
+          schema:
+            type: object
         default:
           $ref: '#/responses/Error'
 
