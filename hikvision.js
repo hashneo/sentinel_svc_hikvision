@@ -368,7 +368,10 @@ function hikvision(config) {
                 json: true,
                 body: {
                     source : c.streamUrl,
-                    type : 'live'
+                    type : 'live',
+                    streamTransport : 'tcp',
+                    headers: {
+                    }
                 }
             };
 
