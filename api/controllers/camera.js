@@ -15,7 +15,10 @@ module.exports.setCameraArmedMode = (req, res) => {
         case 'field':
             callFunction = global.module.setFieldDetection(id, state === 'enable');
             break;
-    };
+        case 'motion':
+            callFunction = global.module.setMotionDetection(id, state === 'enable');
+            break;
+    }
 
     callFunction
         .then( (status) => {

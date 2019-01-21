@@ -123,7 +123,8 @@ paths:
         type: string
         enum: [
           line,
-          field
+          field,
+          motion
         ]
       - in: path
         name: state

@@ -257,6 +257,12 @@ function hikvision(config) {
         return updateSmartSetting( getCamera( id ), 'FieldDetection', enabled);
     };
 
+    this.setMotionDetection = (id, enabled) => {
+        return new Promise( (fulfill, reject) => {
+            fulfill();
+        });
+    };
+
     this.getImage = (id, width, height) => {
 
         return new Promise( (fulfill, reject) => {
