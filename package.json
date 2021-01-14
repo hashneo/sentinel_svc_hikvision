@@ -28,7 +28,7 @@
     "swagger-express-mw": "^0.7.0",
     "swagger-tools": "^0.10.4",
     "uuid": "^3.3.2",
-    "winston": "^3.2.1",
+    "winston": "^3.3.3",
     "xml2js": "^0.4.19"
   },
   "devDependencies": {
